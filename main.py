@@ -9,7 +9,8 @@ app = FastAPI()
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
-    full_name: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 # In-memory storage for demo purposes
@@ -25,7 +26,8 @@ async def register(user: UserRegister):
     users_db[user.email] = {
         "email": user.email,
         "password": user.password,  # Don't store plain passwords in production!
-        "full_name": user.full_name
+        "first_name": user.first_name,
+        "last_name": user.last_name
     }
 
     return {"message": "User registered successfully"}
