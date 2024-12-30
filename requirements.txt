@@ -1,6 +1,7 @@
 fastapi
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt==4.0.1
+passlib==1.7.4
 python-multipart
 sqlalchemy
 psycopg2-binary
@@ -9,4 +10,3 @@ python-dotenv
 alembic
 uvicorn
 pydantic[email]
-python-jwt  # Added this
