@@ -1,5 +1,3 @@
-import json
-
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -9,7 +7,6 @@ from jose import jwt
 from passlib.context import CryptContext
 import os
 from dotenv import load_dotenv
-
 from app.database import get_db, redis_client
 from app.models import User
 from app import schemas
@@ -122,6 +119,7 @@ async def login(
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user.serialize()  # Use the serialize method
 
+
 @app.put("/me", response_model=schemas.UserResponse)
 async def update_user(
         user_update: schemas.UserUpdate,
@@ -141,5 +139,4 @@ async def update_user(
 
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host="0.0.0.0", port=8000)

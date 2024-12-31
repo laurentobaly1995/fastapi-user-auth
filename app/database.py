@@ -22,6 +22,7 @@ redis_client = Redis(
     decode_responses=True
 )
 
+
 def get_db():
     db = SessionLocal()
     try:
