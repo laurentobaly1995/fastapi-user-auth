@@ -21,7 +21,12 @@ class UserResponse(UserBase):
     updated_at: datetime
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+        json_encoders = {
+            UUID: str,  # Simplified UUID conversion
+            datetime: lambda dt: dt.isoformat()  # Convert datetime to ISO format
+        }
+        from_attributes = True  # New in Pydantic v2
 
 class Token(BaseModel):
     access_token: str
