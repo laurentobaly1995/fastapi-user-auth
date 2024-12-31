@@ -5,7 +5,6 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from uuid import UUID
-from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
 import os
@@ -26,7 +25,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 # Helper functions
@@ -51,8 +50,6 @@ def create_access_token(data: dict):
         str(data["sub"])
     )
     return token
-
-
 
 
 async def get_current_user(
@@ -83,6 +80,7 @@ async def get_current_user(
     except:
         raise HTTPException(status_code=401)
 
+
 # Endpoints
 @app.post("/register", response_model=schemas.UserResponse)
 async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
@@ -103,7 +101,7 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return db_user
 
 
-@app.post("/token")
+@app.post("/login")
 async def login(
         form_data: OAuth2PasswordRequestForm = Depends(),
         db: Session = Depends(get_db)
@@ -128,9 +126,11 @@ async def read_users_me(current_user: User = Depends(get_current_user), db: Sess
     if cached_user:
         # Return cached data if available
         return json.loads(cached_user)
+    # Convert string user_id to UUID before querying
+    user_uuid = UUID(current_user.id)
 
     # If not in cache, get from database
-    user = db.query(User).filter(User.id == current_user.id).first()
+    user = db.query(User).filter(User.id == user_uuid).first()
 
     # Store in Redis cache for future requests (expire in 1 hour)
     redis_client.setex(
@@ -157,6 +157,7 @@ async def update_user(
     redis_client.delete(f"user:{current_user.id}")
 
     return current_user
+
 
 if __name__ == "__main__":
     import uvicorn

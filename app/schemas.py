@@ -4,9 +4,9 @@ from datetime import datetime
 from uuid import UUID
 
 class UserBase(BaseModel):
-    email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    email: EmailStr
 
 class UserCreate(UserBase):
     password: str
