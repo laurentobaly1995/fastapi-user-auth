@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.pytest_cache/
+
+# Environment variables
+.env
+
+# Database
+*.db
+
+# IDE
+.vscode/
+.idea/
+
+# Alembic
+alembic.ini
+
+# Local configuration
+*.log
+*.sqlite
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Testing
+.coverage
+htmlcov/
