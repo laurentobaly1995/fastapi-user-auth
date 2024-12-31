@@ -118,29 +118,9 @@ async def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
-@app.get("/me", response_model=schemas.UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Try to get user from Redis cache first
-    cached_user = redis_client.get(f"user:{current_user.id}")
-
-    if cached_user:
-        # Return cached data if available
-        return json.loads(cached_user)
-    # Convert string user_id to UUID before querying
-    user_uuid = UUID(current_user.id)
-
-    # If not in cache, get from database
-    user = db.query(User).filter(User.id == user_uuid).first()
-
-    # Store in Redis cache for future requests (expire in 1 hour)
-    redis_client.setex(
-        f"user:{user.id}",
-        3600,  # 1 hour in seconds
-        json.dumps(user.__dict__)
-    )
-
-    return user
-
+@app.get("/me")
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user.serialize()  # Use the serialize method
 
 @app.put("/me", response_model=schemas.UserResponse)
 async def update_user(

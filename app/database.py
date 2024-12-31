@@ -1,10 +1,13 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 from redis import Redis
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
+
+Base = declarative_base()
 
 # PostgreSQL connection
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/dbname")
