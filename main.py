@@ -1,7 +1,10 @@
+import json
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
+from uuid import UUID
 from typing import Optional
 from jose import jwt
 from passlib.context import CryptContext
@@ -50,33 +53,35 @@ def create_access_token(data: dict):
     return token
 
 
+
+
 async def get_current_user(
         token: str = Depends(oauth2_scheme),
         db: Session = Depends(get_db)
 ):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials"
-    )
-
     try:
-        # First check if token exists in Redis
+        # Check if token exists in Redis
         user_id = redis_client.get(f"token:{token}")
         if not user_id:
-            raise credentials_exception
+            raise HTTPException(status_code=401)
 
-        # Verify JWT
+        # Convert string user_id to UUID before querying
+        user_uuid = UUID(user_id)
+
+        # Verify JWT token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         if str(payload["sub"]) != str(user_id):
-            raise credentials_exception
+            raise HTTPException(status_code=401)
 
-        user = db.query(User).filter(User.id == user_id).first()
+        # Query with UUID type
+        user = db.query(User).filter(User.id == user_uuid).first()
         if user is None:
-            raise credentials_exception
-        return user
-    except:
-        raise credentials_exception
+            raise HTTPException(status_code=401)
 
+        return user
+
+    except:
+        raise HTTPException(status_code=401)
 
 # Endpoints
 @app.post("/register", response_model=schemas.UserResponse)
@@ -95,10 +100,7 @@ async def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return {
-        "message": "User registered successfully",
-        "user": db_user
-    }
+    return db_user
 
 
 @app.post("/token")
@@ -119,8 +121,25 @@ async def login(
 
 
 @app.get("/me", response_model=schemas.UserResponse)
-async def read_users_me(current_user: User = Depends(get_current_user)):
-    return current_user
+async def read_users_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Try to get user from Redis cache first
+    cached_user = redis_client.get(f"user:{current_user.id}")
+
+    if cached_user:
+        # Return cached data if available
+        return json.loads(cached_user)
+
+    # If not in cache, get from database
+    user = db.query(User).filter(User.id == current_user.id).first()
+
+    # Store in Redis cache for future requests (expire in 1 hour)
+    redis_client.setex(
+        f"user:{user.id}",
+        3600,  # 1 hour in seconds
+        json.dumps(user.__dict__)
+    )
+
+    return user
 
 
 @app.put("/me", response_model=schemas.UserResponse)
@@ -129,14 +148,15 @@ async def update_user(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    # Update user fields
+    # Update user in database
     for field, value in user_update.dict(exclude_unset=True).items():
         setattr(current_user, field, value)
-
     db.commit()
-    db.refresh(current_user)
-    return current_user
 
+    # Invalidate cache after update
+    redis_client.delete(f"user:{current_user.id}")
+
+    return current_user
 
 if __name__ == "__main__":
     import uvicorn
